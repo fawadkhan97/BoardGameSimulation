@@ -20,9 +20,18 @@ public class Game {
     public static void main(String[] args) throws IOException {
         Game game = new Game();
         Scanner input = new Scanner(System.in);
-
         System.out.print("enter number of players between 2-4:  ");
-        game.noOfPlayers = input.nextInt();
+
+        do {
+            game.noOfPlayers = input.nextInt();
+
+            if (game.noOfPlayers >= 2 && game.noOfPlayers <= 4)
+                break;
+            else
+                System.out.print("please enter correctly again , enter number of players between 2-4: ");
+
+        } while (true);
+
         game.initializesPlayer(game.noOfPlayers);
         System.out.println("Total players :" + game.noOfPlayers);
         System.out.println(game.specialFieldsLocation());
@@ -123,7 +132,7 @@ public class Game {
         }
         // set skip next round turn of player to true and if its true player next round turn will be skipped
         else if (typeValue == 3) {
-            System.out.println("Oops!!! Trap type 3, player" +playerTurn +" next round turn will be skipped");
+            System.out.println("Oops!!! Trap type 3, player" + playerTurn + " next round turn will be skipped");
             players[id - 1].setHasSkipNextRoundTrap(true);
         }
         // increment all other players position to +2
@@ -153,7 +162,7 @@ public class Game {
 
         System.out.println(">>>>>>>Scores are >>>>>>>");
         for (int i = 0; i < game.noOfPlayers; i++) {
-            System.out.println("Name = player" + i + 1 + "\t Scores = " + players[i].getCurrentPosition());
+            System.out.println("Name = player" + (i + 1) + "\t Scores = " + players[i].getCurrentPosition());
         }
 
         game.gameInProgress = false;
