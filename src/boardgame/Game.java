@@ -3,15 +3,15 @@ package boardgame;
 import java.io.IOException;
 import java.util.*;
 
-public class Game {
+public class Game implements BoardGame {
 
-    private static final Random randomSpecialFields = new Random();
-    private static Players[] players;
-    private static int playerTurn;
+    private final Random randomlyGenerateSpecialFields = new Random();
     private final HashMap<Integer, String> specialFieldMap = new HashMap<>();
     private final Random randomDice = new Random();
-    boolean gameInProgress = true;
-    String playingFieldType;
+    private boolean gameInProgress = true;
+    private String specialFieldTypeName;
+    private Players[] players;
+    private int playerTurn;
     private int noOfPlayers;
     private int playerCurrentPosition;
     private int getNextDiceValue;
@@ -23,91 +23,110 @@ public class Game {
         System.out.print("enter number of players between 2-4:  ");
 
         do {
-            game.noOfPlayers = input.nextInt();
+            // nested do while loop will ensure that user keep looping until user enter a correct number
+            do {
+                try {
+                    game.noOfPlayers = Integer.parseInt(input.nextLine());
+                    break;
+                } catch (Exception e) {
+                    System.out.print("please enter correctly again , enter number of players between 2-4: ");
+                }
+            } while (true);
 
+            // if players are between 2 and 4 break out of loop and continue execution
+            // and if incorrect number are enter restart from beginning
             if (game.noOfPlayers >= 2 && game.noOfPlayers <= 4)
                 break;
             else
-                System.out.print("please enter correctly again , enter number of players between 2-4: ");
+                System.out.print(" please enter correctly again , enter number of players between 2-4: ");
 
         } while (true);
 
-        game.initializesPlayer(game.noOfPlayers);
-        System.out.println("Total players :" + game.noOfPlayers);
+        // initialize each player object
+        game.initializesPlayer(game.noOfPlayers, game);
+        System.out.println("Total players : " + game.noOfPlayers);
+        // print location of trap and bonus fieldsx
         System.out.println(game.specialFieldsLocation());
 
-        playerTurn = 0;
+        game.playerTurn = 0;
         System.out.println(">>>>>>>>>>>>>>>>> game has started >>>>>>>>>>>>");
 
         do {
-            playerTurn += 1;
+            game.playerTurn += 1;
             // reset player turn to first player for next round after all players have completed their turn
-            if (playerTurn > game.noOfPlayers) {
-                playerTurn = 1;
-            }
+            game.playerTurn = game.playerTurn > game.noOfPlayers ? 1 : game.playerTurn;
+
 
             // check if current player Has Skip Next Round Turn Trap and set its value to false
-            if (Boolean.TRUE.equals(players[playerTurn - 1].getHasSkipNextRoundTrap())) {
-                System.out.println("player" + playerTurn + " turn will be skipped due to  stepping on a trap in previous round");
-                players[playerTurn - 1].setHasSkipNextRoundTrap(false);
+            if (Boolean.TRUE.equals(game.players[game.playerTurn - 1].getHasSkipNextRoundTrap())) {
+                System.out.println(game.players[game.playerTurn - 1].getPlayerName() + " turn has been skipped due to stepping on a trap in previous round");
+                game.players[game.playerTurn - 1].setHasSkipNextRoundTrap(false);
                 continue;
             }
 
-            System.out.print("\n its player" + playerTurn + " turn ," + "Current position is: " + players[playerTurn - 1].getCurrentPosition() +
-                    " \n \n >>>>>> " + "player" + playerTurn + ", press enter key to roll dice : ");
+            System.out.print("\n its " + game.players[game.playerTurn - 1].getPlayerName() + " turn ," + "Current position is: " + game.players[game.playerTurn - 1].getCurrentPosition() +
+                    " \n \n >>>>>> " + game.players[game.playerTurn - 1].getPlayerName() + ", press enter key to roll dice : ");
+
             // read enter key and continue execution
             System.in.read();
+
+            // roll the dice (generate random number 1-6) and store its value
             game.getNextDiceValue = game.rollDice();
             System.out.println("\nDice value is " + game.getNextDiceValue);
-            game.playerCurrentPosition = players[playerTurn - 1].getCurrentPosition() + game.getNextDiceValue;
+            game.playerCurrentPosition = game.players[game.playerTurn - 1].getCurrentPosition() + game.getNextDiceValue;
 
             // check if moving current player to next position contain some specials field
-            if (Boolean.TRUE.equals(game.checkSpecialField(game.playerCurrentPosition))) {
-                // get special field type  is +either "Bonus" or "Trap"
-                game.playingFieldType = game.specialFieldMap.get(game.playerCurrentPosition);
-                game.currentPlayerId = players[playerTurn - 1].getId();
-
+            if (Boolean.TRUE.equals(game.checkSpecialField(game.playerCurrentPosition, game))) {
+                // get special field type name it is either "Bonus" or "Trap"
+                game.specialFieldTypeName = game.specialFieldMap.get(game.playerCurrentPosition);
+                // get current player id
+                game.currentPlayerId = game.players[game.playerTurn - 1].getId();
                 // call special field type respective method
-                if (game.playingFieldType.equals("Trap")) {
-                    if (Boolean.TRUE.equals(players[game.currentPlayerId - 1].hasJoker)) {
-                        System.out.println("player has a joker card , Trap will have no effect at this turn");
-                    } else
-                        trapField(game.playerCurrentPosition, game.currentPlayerId);
+                if (game.specialFieldTypeName.equals("Trap")) {
+                    if (Boolean.TRUE.equals(game.players[game.currentPlayerId - 1].getHasJoker())) {
+                        System.out.println(game.players[game.currentPlayerId - 1].getPlayerName() + " has a joker card , Trap will have no effect at this turn");
 
-                } else bonusField(game.playerCurrentPosition, game.currentPlayerId);
-                System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+                    } else {
+                        game.trapField(game.playerCurrentPosition, game.currentPlayerId, game);
+                    }
+
+                } else {
+                    game.bonusField(game.playerCurrentPosition, game.currentPlayerId, game);
+                }
+
+                // update player position to latest
+                game.players[game.playerTurn - 1].setCurrentPosition(game.playerCurrentPosition);
+                // display current position
+                game.displayPlayerCurrentPosition(game);
 
             } else {
-                players[playerTurn - 1].setCurrentPosition(game.playerCurrentPosition);
-                System.out.println("\nplayer" + playerTurn + " current position updated to " + players[playerTurn - 1].getCurrentPosition());
-                System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+                game.players[game.playerTurn - 1].setCurrentPosition(game.playerCurrentPosition);
+                game.displayPlayerCurrentPosition(game);
 
             }
             // if player reached desired goal
-            if (players[playerTurn - 1].getCurrentPosition() > 30) {
+            if (game.players[game.playerTurn - 1].getCurrentPosition() > 30) {
                 game.gameOver(game);
             }
 
         } while (game.gameInProgress);
     }
 
-    public static void bonusField(int playerCurrentPosition, int id) {
-        int typeValue = randomSpecialFields.nextInt(3) + 1;
+    @Override
+    public void bonusField(int playerCurrentPosition, int id, Game game) {
+        int typeValue = randomlyGenerateSpecialFields.nextInt(3) + 1;
 
         if (typeValue == 1) {
-            System.out.println("Yayy!! Bonus type 1, player position will be incremented by 2 , current position is " + players[id - 1].getCurrentPosition());
-
-            players[id - 1].setCurrentPosition(playerCurrentPosition + 2);
-            System.out.println("\nplayer" + playerTurn + " current position updated to " + players[playerTurn - 1].getCurrentPosition());
-
+            System.out.println("Yayy!! Bonus type 1, players position will be incremented by 2 , current position is " + game.players[id - 1].getCurrentPosition());
+            game.playerCurrentPosition = game.playerCurrentPosition + 2;
         } else if (typeValue == 3) {
-            System.out.println("Yayy!! Bonus type 3,  player now have a joker");
-
-            players[id - 1].setHasJoker(true);
+            System.out.println("Yayy!! Bonus type 3,  " + game.players[game.playerTurn - 1].getPlayerName() + " now have a joker");
+            game.players[id - 1].setHasJoker(true);
         }
         // decrement all other players position to +2
         else {
-            System.out.println("Yayy!! Bonus type 1 , all other player position will be decremented by 2");
+            System.out.println("Yayy!! Bonus type 1 , all other players position will be decremented by 2");
+            // increment position of all other players (excluding our current player) by +2
             for (Players player : players) {
                 // skip current player
                 if (player.getId() == id) continue;
@@ -120,24 +139,24 @@ public class Game {
 
     }
 
-    public static void trapField(int playerCurrentPosition, int id) {
-        int typeValue = randomSpecialFields.nextInt(3) + 1;
+    @Override
+    public void trapField(int playerCurrentPosition, int id, Game game) {
+        int typeValue = randomlyGenerateSpecialFields.nextInt(3) + 1;
 
         // increment player position by 2
         if (typeValue == 1) {
-            System.out.println("Oops!!! Trap type 1 player position has been decremented by 2 , current position is " + players[id - 1].getCurrentPosition());
-            players[id - 1].setCurrentPosition(playerCurrentPosition - 2);
-            System.out.println("\nplayer" + playerTurn + " current position updated to " + players[playerTurn - 1].getCurrentPosition());
+            System.out.println("Oops!!! Trap type 1 " + game.players[game.playerTurn - 1].getPlayerName() + " position has been decremented by 2 , current position is " + game.players[id - 1].getCurrentPosition());
+            game.playerCurrentPosition = game.playerCurrentPosition - 2;
 
         }
         // set skip next round turn of player to true and if its true player next round turn will be skipped
         else if (typeValue == 3) {
-            System.out.println("Oops!!! Trap type 3, player" + playerTurn + " next round turn will be skipped");
-            players[id - 1].setHasSkipNextRoundTrap(true);
+            System.out.println("Oops!!! Trap type 3, its " + game.players[game.playerTurn - 1].getPlayerName() + " next round turn will be skipped");
+            game.players[id - 1].setHasSkipNextRoundTrap(true);
         }
         // increment all other players position to +2
         else {
-            System.out.println("Oops!! Trap type 2 , all other player position will be incremented by 2");
+            System.out.println("Oops!! Trap type 2 , all other players position will be incremented by 2");
             for (Players player : players) {
                 if (player.getId() == id) continue;
                 player.setCurrentPosition(player.getCurrentPosition() + 2);
@@ -145,60 +164,76 @@ public class Game {
         }
     }
 
-    public Boolean checkSpecialField(int position) {
+    @Override
+    public Boolean checkSpecialField(int position, Game game) {
 
         if (specialFieldsLocation().containsKey(position)) {
-            playingFieldType = specialFieldMap.get(position);
-            System.out.println("player" + playerTurn + "has landed on a  " + playingFieldType);
+            specialFieldTypeName = specialFieldMap.get(position);
+            System.out.println(game.players[game.playerTurn - 1].getPlayerName() + " has landed on a  " + specialFieldTypeName + " player current position is " + position);
             return true;
         }
         return false;
     }
 
+    @Override
     public void gameOver(Game game) {
         // if player score has reached greater than 30
         System.out.println(">>>>>>>>>GAME OVER >>>>>>");
-        System.out.println("player" + playerTurn + " has won the game ");
+        System.out.println(game.players[game.playerTurn - 1].getPlayerName() + " has won the game ");
 
         System.out.println(">>>>>>>Scores are >>>>>>>");
         for (int i = 0; i < game.noOfPlayers; i++) {
-            System.out.println("Name = player" + (i + 1) + "\t Scores = " + players[i].getCurrentPosition());
+            System.out.println("Name = " + game.players[i].getPlayerName() + "\t Scores = " + game.players[i].getCurrentPosition());
         }
 
         game.gameInProgress = false;
     }
 
+    @Override
     public int rollDice() {
         return randomDice.nextInt(6) + 1;
     }
 
-    public void initializesPlayer(int noOfPlayers) {
+    @Override
+    public void initializesPlayer(int noOfPlayers, Game game) {
         players = new Players[noOfPlayers];
         // initialize players
-        for (int i = 1; i <= players.length; i++) {
-            players[i - 1] = new Players(i);
+        for (int i = 0; i < players.length; i++) {
+            System.out.print("enter player" + (i + 1) + " name: ");
+            Scanner inputPlayerName = new Scanner(System.in);
+
+            game.players[i] = new Players(i + 1, inputPlayerName.nextLine());
+            System.out.println("player name : " + game.players[i].getPlayerName() + "\t player id: " + game.players[i].getId());
         }
 
 
     }
 
+    @Override
     public Map<Integer, String> specialFieldsLocation() {
         // create a set of 10 unique values
         final Set<Integer> specialFieldSet = new HashSet<>(10);
         while (specialFieldSet.size() < 10) {
-            specialFieldSet.add(randomSpecialFields.nextInt(30 + 1));
+            specialFieldSet.add(randomlyGenerateSpecialFields.nextInt(30 + 1));
         }
         //add uniques values as key to Hashmap
         int counter = 0;
         for (Integer s : specialFieldSet) {
             counter++;
             // set first  5 values as traps
-            if (counter < 6)
+            if (counter % 2 == 0)
                 specialFieldMap.put(s, "Trap");
             else specialFieldMap.put(s, "Bonus");
 
         }
 
+
         return specialFieldMap;
+    }
+
+    @Override
+    public void displayPlayerCurrentPosition(Game game) {
+        System.out.println(game.players[game.playerTurn - 1].getPlayerName() + " current position updated to " + game.players[game.playerTurn - 1].getCurrentPosition());
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
     }
 }

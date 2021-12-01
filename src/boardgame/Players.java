@@ -1,16 +1,26 @@
 package boardgame;
 
 public class Players {
-    int id;
-    int currentPosition;
-    Boolean hasJoker;
-    Boolean hasSkipNextRoundTrap;
+   private int id;
+   private String playerName;
+   private int currentPosition;
+   private Boolean hasJoker;
+   private Boolean hasSkipNextRoundTrap;
 
-    public Players(int id) {
+    public Players(int id, String name) {
         this.id = id;
+        this.playerName = name;
         currentPosition = 0;
         hasJoker = false;
         hasSkipNextRoundTrap = false;
+    }
+
+    public String getPlayerName() {
+        return playerName;
+    }
+
+    public void setPlayerName(String playerName) {
+        this.playerName = playerName;
     }
 
     public int getId() {
